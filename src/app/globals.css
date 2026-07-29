@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f6efe7;
+  --color-foreground: #1f2937;
+  --color-card: #fffcf8;
+  --color-muted: #efe4d4;
+  --color-muted-foreground: #6b7280;
+  --color-border: #e7dbca;
+  --color-primary: #b45309;
+  --color-primary-foreground: #ffffff;
+  --radius-sm: 0.65rem;
+  --radius-md: 0.9rem;
+  --radius-lg: 1.2rem;
+  --radius-xl: 1.5rem;
+
+  --animate-slide-in: slide-in 0.3s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-bounce-subtle: bounce-subtle 0.4s ease-out;
+
+  @keyframes slide-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes scale-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-4px); }
+    60% { transform: translateY(-2px); }
+  }
+}
+
+:root {
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-playfair);
+}
+
+* { border-color: var(--color-border); box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(circle at 12% -10%, rgb(251 191 36 / 14%), transparent 34rem),
+    radial-gradient(circle at 88% 18%, rgb(180 83 9 / 10%), transparent 28rem),
+    linear-gradient(135deg, #fcf8f2 0%, #f5ebdd 100%);
+  background-attachment: fixed;
+  color: var(--color-foreground);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+button, a, input, textarea, select { outline: none; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+::selection { background: #fdba74; color: #7c2d12; }
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }

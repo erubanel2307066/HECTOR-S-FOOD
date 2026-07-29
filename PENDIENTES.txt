@@ -1,0 +1,89 @@
+========================================================
+HECTOR'S FOOD - LO QUE FALTA POR IMPLEMENTAR
+Fecha: 28 de Julio, 2026
+========================================================
+
+ESTADO ACTUAL: ~85% completado
+El sistema está funcional: landing, menú, carrito, pedidos,
+admin completo, chatbot WhatsApp, seguridad implementada.
+Falta migrar a Supabase para imágenes yDeploy final.
+
+========================================================
+PENDIENTE: MIGRACIÓN A SUPABASE
+========================================================
+
+ESTO LO TIENES QUE HACER TÚ (pasos manuales):
+
+1. Crear cuenta en https://supabase.com
+2. Crear un proyecto nuevo (elegir región más cercana)
+3. Ir a Settings > Database > Connection string
+   → Copiar la URI completa (la que usa el pooler, puerto 6543)
+4. Ir a Storage > Create bucket
+   → Nombre: "menu-images"
+   → Marcar como PÚBLICO
+5. Ir a Settings > API y copiar:
+   → Project URL (algo como https://xxxxx.supabase.co)
+   → anon public key
+   → service_role secret key
+6. En el dashboard de Supabase ir a SQL Editor y correr:
+   npx prisma migrate deploy
+   (esto crea las tablas en Supabase)
+7. Correr el seed para datos iniciales:
+   npm run seed
+
+========================================================
+
+ESTO YO LO IMPLEMENTO (cuando me des las claves):
+
+1. Instalar @supabase/supabase-js
+2. Crear src/lib/supabase.ts con cliente configurado
+3. Cambiar upload/route.ts para subir a Supabase Storage
+4. Agregar borrado de imagen en menu/[id]/route.ts
+5. Agregar *.supabase.co a next.config.ts
+6. Actualizar .env.example y render.yaml
+7. Actualizar AGENT.md
+
+========================================================
+
+PENDIENTES ADICIONALES (no urgentes):
+
+8.  Migrar middleware.ts a proxy.ts (Next.js 16 deprecation)
+    → No es urgente, funciona bien como está
+
+9.  Página de configuración editable
+    → Actualmente es solo display, sin campos editables
+    → Podemos agregarla si necesitas cambiar horarios/zona
+    desde el admin
+
+10. Considerar migración a Vercel en vez de Render
+    → Vercel tiene mejor soporte para Next.js
+    → Pero Render funciona bien, es decisión tuya
+
+========================================================
+ARCHIVOS QUE CAMBIARÁN CON SUPABASE:
+========================================================
+
+src/lib/supabase.ts              → NUEVO (cliente Supabase)
+src/app/api/admin/upload/route.ts → MODIFICADO (Supabase Storage)
+src/app/api/admin/menu/[id]/route.ts → MODIFICADO (borrar imagen)
+next.config.ts                    → MODIFICADO (remotePatterns)
+.env.example                      → MODIFICADO (nuevas vars)
+render.yaml                       → MODIFICADO (quitar DB de Render)
+package.json                      → MODIFICADO (nuevo paquete)
+AGENT.md                          → MODIFICADO (docs actualizadas)
+
+========================================================
+VARIABLES DE ENTorno QUE NECESITARÁS EN RENDER:
+========================================================
+
+DATABASE_URL="postgresql://postgres.xxx:password@aws-0-xxx.pooler.supabase.com:6543/postgres"
+SUPABASE_URL="https://xxxxx.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIs..."
+ADMIN_PASSWORD_HASH="$2b$12$..."
+WHATSAPP_TOKEN=""
+WHATSAPP_PHONE_ID=""
+WHATSAPP_VERIFY_TOKEN="hectors_verify_2024"
+WHATSAPP_APP_SECRET=""
+NEXT_PUBLIC_WHATSAPP_NUMBER="521234567890"
+
+========================================================

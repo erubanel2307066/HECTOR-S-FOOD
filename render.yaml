@@ -7,10 +7,12 @@ services:
     startCommand: npm run start
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: hectors-db
-          property: connectionString
-      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
         sync: false
       - key: WHATSAPP_TOKEN
         sync: false
@@ -18,10 +20,7 @@ services:
         sync: false
       - key: WHATSAPP_VERIFY_TOKEN
         value: "hectors_verify_2024"
+      - key: WHATSAPP_APP_SECRET
+        sync: false
       - key: NEXT_PUBLIC_WHATSAPP_NUMBER
         sync: false
-
-databases:
-  - name: hectors-db
-    plan: free
-    databaseName: hectors_food

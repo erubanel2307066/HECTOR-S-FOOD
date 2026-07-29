@@ -16,7 +16,9 @@ Venta de pollos, hamburguesas, tacos, guarniciones y bebidas en México.
 | Toasts | Sonner | 2.0 |
 | Estado | React Context (CartProvider) | - |
 | ORM | Prisma | 7.8 |
-| DB | PostgreSQL (Render free) | - |
+| DB | PostgreSQL (Supabase) | - |
+| Storage | Supabase Storage (bucket menu-images) | - |
+| Supabase Client | @supabase/supabase-js | - |
 | DB local | PostgreSQL via @prisma/adapter-pg | - |
 | WhatsApp API | Meta Cloud API (Graph v25.0) | - |
 | Autenticación Admin | Cookie-based (httpOnly) | - |
@@ -66,6 +68,7 @@ hectors-food/
 │   ├── middleware.ts          # Auth gate centralizado
 │   ├── lib/
 │   │   ├── auth.ts          # Helper centralizado verificación admin
+│   │   ├── supabase.ts      # Cliente Supabase (Storage imágenes)
 │   │   ├── cart-context.tsx  # Context + Provider del carrito
 │   │   ├── constants.ts     # Constantes de negocio
 │   │   ├── prisma.ts        # PrismaClient con adapter-pg
@@ -132,7 +135,7 @@ Diseño tipo Google/Material Design: limpio, espacioso, bordes redondeados, somb
 
 ---
 
-## Base de Datos (Prisma + SQLite)
+## Base de Datos (Prisma + PostgreSQL en Supabase)
 
 ### Modelo: MenuItem
 | Campo | Tipo | Descripción |
@@ -281,15 +284,19 @@ Estas constantes se usan en toda la UI para mensajes amigables al cliente sobre 
 ## Variables de Entorno
 
 ```env
-# Base de datos (PostgreSQL)
-DATABASE_URL="postgresql://user:password@localhost:5432/hectors_food"
+# Base de datos (Supabase PostgreSQL - pooler puerto 6543)
+DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-xxx.pooler.supabase.com:6543/postgres"
+
+# Supabase (para Storage de imágenes)
+SUPABASE_URL="https://xxxxx.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIs..."
 
 # Admin (usar solo UNA de las dos opciones)
-# Opción 1: Contraseña en texto plano (solo desarrollo)
-ADMIN_PASSWORD="hectors123"
-# Opción 2: Hash bcrypt (recomendado para producción)
+# Opción 1: Hash bcrypt (RECOMENDADO para producción)
 # Generar con: node -e "console.log(require('bcryptjs').hashSync('tu_contraseña', 12))"
-# ADMIN_PASSWORD_HASH="$2b$12$..."
+ADMIN_PASSWORD_HASH="$2b$12$..."
+# Opción 2: Contraseña en texto plano (solo desarrollo)
+# ADMIN_PASSWORD="hectors123"
 
 # Meta WhatsApp Cloud API
 WHATSAPP_TOKEN=""
@@ -305,16 +312,29 @@ NEXT_PUBLIC_WHATSAPP_NUMBER="521234567890"
 
 ## Despliegue en Render
 
-1. Crear cuenta en [render.com](https://render.com)
-2. Conectar repositorio de GitHub
-3. Render detecta `render.yaml` automáticamente
-4. La base de datos PostgreSQL se crea sola (plan gratis)
-5. Configurar variables de entorno en Dashboard
-6. Después del primer deploy, correr migraciones y seed en Render Shell:
-   ```bash
-   npx prisma migrate deploy
-   npx prisma db seed
-   ```
+### Requisitos previos (tú)
+1. Crear proyecto en [supabase.com](https://supabase.com) (plan gratis)
+2. En Supabase: Settings > Database > Connection string → copiar URI **directa** (puerto 5432)
+3. En Supabase: Settings > API → copiar **Project URL** y **service_role key**
+4. En Supabase: **Storage > New bucket** → `menu-images` como **público**
+
+### Deploy
+1. Ir a [render.com](https://render.com) y conectar repositorio de GitHub
+2. Render detecta `render.yaml` automáticamente
+3. En el Dashboard de Render, llenar las env vars marcadas como `sync: false`:
+   - `DATABASE_URL` — de Supabase (directa, puerto 5432)
+   - `SUPABASE_URL` — de Supabase
+   - `SUPABASE_SERVICE_ROLE_KEY` — de Supabase
+   - `ADMIN_PASSWORD_HASH` — generar con `node -e "console.log(require('bcryptjs').hashSync('tu_contraseña', 12))"`
+   - `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_APP_SECRET` — de Meta
+   - `NEXT_PUBLIC_WHATSAPP_NUMBER` — número E.164 sin +
+
+### Después del deploy (Render Shell)
+Render ejecuta build y start automáticamente. Luego, en la consola de Render:
+```bash
+npx prisma migrate deploy   # Crear tablas en Supabase
+npx prisma db seed           # Poblar datos de ejemplo
+```
 
 ---
 
@@ -430,7 +450,7 @@ npx tsc --noEmit         # TypeScript check
 4. **Rutas cliente**: No usar route groups `(client)`. El `client-layout.tsx` detecta `/admin` y aplica layout correspondiente.
 5. **Import paths**: Usar `@/` alias
 6. **Estilos**: Tailwind CSS v4, no CSS modules ni styled-components
-7. **Imágenes**: Subir imágenes de menú por `POST /api/admin/upload` a `public/images/menu/`. El fondo del hero público se almacena en `public/images/hero-food.png` y debe renderizarse con `next/image`, `fill`, `priority` y una capa de contraste para mantener textos legibles. La ilustración circular del aviso de preparación usa `public/images/chef-preparation.png` con `next/image`, `fill` y `object-cover`.
+7. **Imágenes**: Subir imágenes de menú por `POST /api/admin/upload` a Supabase Storage (bucket `menu-images` público). El fondo del hero público se almacena en `public/images/hero-food.png` y debe renderizarse con `next/image`, `fill`, `priority` y una capa de contraste para mantener textos legibles. La ilustración circular del aviso de preparación usa `public/images/chef-preparation.png` con `next/image`, `fill` y `object-cover`.
 8. **Formato teléfono**: 10 dígitos locales (sin código de país). `sanitizePhone()` quita +52 automáticamente
 9. **Admin auth**: Cookie `admin_session` con token criptográfico (32 bytes hex), httpOnly, sameSite strict, 24h expiración. Sesiones en memoria (`src/lib/session.ts`). Middleware centralizado verifica auth antes de llegar a los handlers.
 10. **Placeholders**: Seed usa `https://picsum.photos/seed/{codigo}/400/300`

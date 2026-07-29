@@ -1,56 +1,70 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateTable
 CREATE TABLE "MenuItem" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "price" REAL NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
     "category" TEXT NOT NULL,
+    "image" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "MenuItem_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "DailyMenu" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "date" DATETIME NOT NULL,
+    "id" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
-    "items" TEXT NOT NULL
+    "items" TEXT NOT NULL,
+
+    CONSTRAINT "DailyMenu_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Client" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "name" TEXT,
     "orders" INTEGER NOT NULL DEFAULT 0,
-    "lastOrder" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "lastOrder" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Client_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Order" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "items" TEXT NOT NULL,
     "type" TEXT NOT NULL DEFAULT 'delivery',
     "address" TEXT,
     "schedule" TEXT,
-    "total" REAL NOT NULL,
+    "total" DOUBLE PRECISION NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'pending',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Conversation" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "step" TEXT NOT NULL DEFAULT 'welcome',
     "data" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Conversation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

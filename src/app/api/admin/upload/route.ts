@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
 import { isAdmin } from '@/lib/auth'
+import { BUCKET_NAME, getPublicUrl, uploadImage } from '@/lib/supabase'
 
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_SIZE = 5 * 1024 * 1024
 
-const MAGIC_BYTES: { bytes: number[]; ext: string; mime: string }[] = [
-  { bytes: [0xff, 0xd8, 0xff], ext: 'jpg', mime: 'image/jpeg' },
-  { bytes: [0x89, 0x50, 0x4e, 0x47], ext: 'png', mime: 'image/png' },
-  { bytes: [0x52, 0x49, 0x46, 0x46], ext: 'webp', mime: 'image/webp' },
-  { bytes: [0x47, 0x49, 0x46, 0x38], ext: 'gif', mime: 'image/gif' },
-]
-
-function detectFileType(buffer: Buffer): { ext: string; mime: string } | null {
-  for (const type of MAGIC_BYTES) {
-    if (buffer.length >= type.bytes.length) {
-      const match = type.bytes.every((b, i) => buffer[i] === b)
-      if (match) return { ext: type.ext, mime: type.mime }
-    }
-  }
-  return null
-}
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) {
@@ -35,6 +19,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Tipo de archivo no permitido. Usa JPG, PNG, WebP o GIF.' },
+        { status: 400 }
+      )
+    }
+
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: 'El archivo es muy grande. Máximo 5MB.' },
@@ -42,24 +33,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const ext = file.name.split('.').pop() || 'jpg'
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
 
-    const detected = detectFileType(buffer)
-    if (!detected) {
-      return NextResponse.json(
-        { error: 'Tipo de archivo no permitido. Usa JPG, PNG, WebP o GIF.' },
-        { status: 400 }
-      )
+    const uploadError = await uploadImage(filename, bytes, file.type)
+
+    if (uploadError) {
+      console.error('[Supabase Upload Error]', uploadError)
+      return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
     }
 
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${detected.ext}`
-
-    const dir = join(process.cwd(), 'public', 'images', 'menu')
-    await mkdir(dir, { recursive: true })
-    await writeFile(join(dir, filename), buffer)
-
-    const url = `/images/menu/${filename}`
+    const url = getPublicUrl(filename)
     return NextResponse.json({ url })
   } catch (error) {
     console.error('[Upload Error]', error)

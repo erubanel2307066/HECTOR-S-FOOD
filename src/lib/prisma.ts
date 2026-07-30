@@ -4,8 +4,7 @@ import { Pool } from 'pg'
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  family: 4,
-} as any)
+})
 
 const adapter = new PrismaPg({ pool } as any)
 

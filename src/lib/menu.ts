@@ -1,7 +1,7 @@
 import { prisma } from './prisma'
 import type { MenuItem } from '../generated/prisma/client'
 
-export function formatMenuText(items: MenuItem[]): string {
+export function formatMenuText(items: MenuItem[], title = 'MENÚ DEL DÍA'): string {
   if (items.length === 0) return '🍽 Hoy no hay menú disponible.'
 
   const categorized = items.reduce<Record<string, MenuItem[]>>((acc, item) => {
@@ -10,7 +10,7 @@ export function formatMenuText(items: MenuItem[]): string {
     return acc
   }, {})
 
-  let text = '🍽 *MENÚ DEL DÍA*\n\n'
+  let text = `🍽 *${title.toUpperCase()}*\n\n`
 
   for (const [category, categoryItems] of Object.entries(categorized)) {
     text += `*${category.toUpperCase()}*\n`

@@ -8,15 +8,16 @@ interface Session {
 const sessions = new Map<string, Session>()
 const SESSION_TTL = 24 * 60 * 60 * 1000 // 24 horas
 
-// Limpiar sesiones expiradas cada 10 minutos
-setInterval(() => {
+function cleanupExpiredSessions() {
   const now = Date.now()
   for (const [token, session] of sessions) {
     if (now - session.createdAt > SESSION_TTL) {
       sessions.delete(token)
     }
   }
-}, 10 * 60 * 1000)
+}
+
+setInterval(cleanupExpiredSessions, 10 * 60 * 1000)
 
 export function createSession(): string {
   const token = crypto.randomBytes(32).toString('hex')
@@ -36,4 +37,9 @@ export function validateSession(token: string): boolean {
 
 export function destroySession(token: string): void {
   sessions.delete(token)
+}
+
+export function listSessions(): string[] {
+  cleanupExpiredSessions()
+  return Array.from(sessions.keys())
 }

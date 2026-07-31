@@ -203,6 +203,24 @@ npx prisma generate             # Regenerar cliente Prisma
 
 ---
 
+## Estado Actual del Proyecto
+
+### ✅ Implementado recientemente
+- El panel admin puede crear, editar y desactivar platos desde la interfaz.
+- Los platos se guardan en la base de datos de Supabase mediante Prisma.
+- El endpoint de creación de menú responde con éxito y persiste datos reales en `MenuItem`.
+- El chatbot de WhatsApp responde a mensajes como “menú”, “menú completo”, “información” y “hola”.
+- El bot muestra los platos activos desde la base de datos para que el cliente vea el menú.
+- La autenticación del admin funciona con cookies y permite acceder a las rutas protegidas del panel.
+
+### 🔧 Flujo operativo actual
+1. El admin crea un plato desde `/admin/menu`.
+2. El backend guarda el registro en Supabase mediante Prisma.
+3. El chatbot lee los platos activos desde la base de datos y los envía al cliente por WhatsApp.
+4. Los pedidos realizados por WhatsApp se guardan en `Order` y quedan visibles en el dashboard admin.
+
+---
+
 ## API Endpoints
 
 ### Públicos
@@ -258,8 +276,14 @@ Order → recibe códigos → tipo → dirección → horario → confirmar
 | File | Función |
 |------|---------|
 | `handlers/welcome.ts` | Bienvenida, menú principal, info |
-| `handlers/menu.ts` | Mostrar menú del día o completo |
+| `handlers/menu.ts` | Mostrar menú del día o completo usando platos activos de la DB |
 | `handlers/order.ts` | Flujo completo de pedido |
+
+### Comportamiento del chatbot
+- Responde a mensajes de texto simples para iniciar el flujo.
+- Usa `prisma.menuItem.findMany({ where: { isActive: true } })` para enviar el menú al cliente.
+- Mantiene el estado de conversación en `Conversation` para continuar con el pedido.
+- Soporta botones interactivos para “menú del día”, “menú completo”, “información” y “hacer pedido”.
 
 ---
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { toast } from 'sonner'
 import { Icon } from '@/components/ui/icons'
 
 interface MenuItem {
@@ -270,14 +271,33 @@ function MenuItemForm({
     const url = item ? `/api/admin/menu/${item.id}` : '/api/admin/menu'
     const method = item ? 'PATCH' : 'POST'
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
 
-    setSaving(false)
-    onSave()
+      let data: { error?: string } = {}
+      try {
+        data = await res.json()
+      } catch {
+        // ignore
+      }
+
+      if (!res.ok) {
+        toast.error(data.error || 'No se pudo guardar el plato')
+        setSaving(false)
+        return
+      }
+
+      toast.success(item ? 'Plato actualizado' : 'Plato creado')
+      setSaving(false)
+      onSave()
+    } catch {
+      toast.error('No se pudo guardar el plato')
+      setSaving(false)
+    }
   }
 
   return (

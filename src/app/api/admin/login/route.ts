@@ -25,7 +25,9 @@ export async function POST(req: Request) {
     let valid = false
     if (hash) {
       valid = await bcrypt.compare(String(password), hash)
-    } else if (plainPassword) {
+    }
+
+    if (!valid && plainPassword) {
       valid = String(password) === plainPassword
     }
 
@@ -34,8 +36,8 @@ export async function POST(req: Request) {
       const cookieStore = await cookies()
       cookieStore.set('admin_session', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: false,
+        sameSite: 'lax',
         maxAge: 60 * 60 * 24,
         path: '/',
       })

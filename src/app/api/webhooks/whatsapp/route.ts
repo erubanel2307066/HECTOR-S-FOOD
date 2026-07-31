@@ -101,23 +101,31 @@ export async function POST(req: Request) {
 }
 
 async function handleIncomingText(phone: string, text: string) {
-  const lower = text.toLowerCase()
+  const lower = text.toLowerCase().trim()
 
-  if (['hola', 'buenas', 'hello', 'hey', 'menu', 'menú'].includes(lower)) {
-    const conv = await prisma.conversation.findUnique({ where: { phone } })
-    if (!conv) {
-      return handleWelcome(phone)
-    }
-    return handleMainMenu(phone)
+  if (['hola', 'buenas', 'hello', 'hey'].includes(lower)) {
+    return handleWelcome(phone)
+  }
+
+  if (['menu', 'menú', 'menu del dia', 'menú del día', 'menú hoy', 'menu hoy'].includes(lower)) {
+    return handleMenuToday(phone)
+  }
+
+  if (['menu completo', 'menú completo', 'ver menu completo', 'ver menú completo'].includes(lower)) {
+    return handleMenuFull(phone)
+  }
+
+  if (['info', 'información', 'informacion', 'horarios'].includes(lower)) {
+    return handleInfo(phone)
+  }
+
+  if (['ordenar', 'quiero pedir', 'hacer pedido', 'pedido', 'pedir'].includes(lower)) {
+    return handleMenuToday(phone)
   }
 
   const conv = await prisma.conversation.findUnique({ where: { phone } })
   if (!conv) {
     return handleWelcome(phone)
-  }
-
-  if (lower === 'menu' || lower === 'menú') {
-    return handleMenuToday(phone)
   }
 
   if (conv.step === 'main_menu') {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { isAdmin } from '@/lib/auth'
+import { isAdminFromRequest } from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await isAdminFromRequest(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await isAdminFromRequest(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
     const { isActive, ...itemRest } = item
     return NextResponse.json({ item: { ...itemRest, available: isActive } })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create menu item' }, { status: 400 })
+    console.error('Failed to create menu item', error)
+    return NextResponse.json(
+      { error: 'No se pudo crear el plato. Revisa la conexión a la base de datos y las migraciones.' },
+      { status: 500 }
+    )
   }
 }

@@ -28,12 +28,12 @@ model DailyMenu {
 }
 
 model Client {
-  id        String   @id @default(cuid())
-  phone     String   @unique
+  id        String    @id @default(cuid())
+  phone     String    @unique
   name      String?
-  orders    Int      @default(0)
+  orders    Int       @default(0)
   lastOrder DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model Order {

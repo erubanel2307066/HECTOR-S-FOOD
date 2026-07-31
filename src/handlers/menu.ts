@@ -10,7 +10,7 @@ export async function handleMenuToday(phone: string) {
     return
   }
 
-  const menuText = formatMenuText(items)
+  const menuText = formatMenuText(items, 'MENÚ DEL DÍA')
   await sendText(phone, menuText)
 
   await prisma.conversation.upsert({
@@ -31,7 +31,7 @@ export async function handleMenuToday(phone: string) {
 
 export async function handleMenuFull(phone: string) {
   const items = await prisma.menuItem.findMany({ where: { isActive: true } })
-  const menuText = formatMenuText(items)
+  const menuText = formatMenuText(items, 'MENÚ COMPLETO')
 
   await sendText(phone, menuText)
 

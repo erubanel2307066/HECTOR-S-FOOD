@@ -6,6 +6,8 @@ services:
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm run start
     envVars:
+      - key: NODE_OPTIONS
+        value: "--dns-result-order=ipv4first"
       - key: DATABASE_URL
         sync: false
       - key: SUPABASE_URL

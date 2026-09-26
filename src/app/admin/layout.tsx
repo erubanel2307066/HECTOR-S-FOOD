@@ -1,17 +1,13 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/icons'
-import { NotificationContext } from './notifications-context'
 import { Toaster } from 'sonner'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' as const },
   { href: '/admin/menu', label: 'Menú', icon: 'restaurantMenu' as const },
-  { href: '/admin/pedidos', label: 'Pedidos', icon: 'orders' as const },
-  { href: '/admin/clientes', label: 'Clientes', icon: 'people' as const },
-  { href: '/admin/difusion', label: 'Difusión', icon: 'broadcast' as const },
   { href: '/admin/configuracion', label: 'Configuración', icon: 'settings' as const },
 ]
 
@@ -21,16 +17,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [authed, setAuthed] = useState(false)
   const [checking, setChecking] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
 
   const isLoginPage = pathname === '/admin/login'
-
-  const fetchPending = useCallback(() => {
-    fetch('/api/admin/pedidos?status=pending')
-      .then((r) => r.json())
-      .then((d) => setPendingCount(d.orders?.length || 0))
-      .catch(() => {})
-  }, [])
 
   useEffect(() => {
     if (isLoginPage) {
@@ -46,20 +34,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } else {
           setAuthed(true)
           setChecking(false)
-          fetchPending()
         }
       } catch {
         router.push('/admin/login')
       }
     }
     check()
-  }, [router, isLoginPage, fetchPending])
-
-  useEffect(() => {
-    if (!authed) return
-    const interval = setInterval(fetchPending, 10000)
-    return () => clearInterval(interval)
-  }, [authed, fetchPending])
+  }, [router, isLoginPage])
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -83,7 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!authed) return null
 
   return (
-    <NotificationContext.Provider value={{ pendingCount, refresh: fetchPending }}>
+    <>
       <Toaster position="top-right" richColors closeButton />
       <div className="flex min-h-screen bg-background">
         {sidebarOpen && (
@@ -121,7 +102,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <nav className="flex-1 space-y-1 p-3">
             {navItems.map((item) => {
               const active = pathname === item.href
-              const showBadge = item.href === '/admin/pedidos' && pendingCount > 0
               return (
                 <a
                   key={item.href}
@@ -134,11 +114,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 >
                   <Icon name={item.icon} size={20} />
                   <span className="flex-1">{item.label}</span>
-                  {showBadge && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                      {pendingCount > 9 ? '9+' : pendingCount}
-                    </span>
-                  )}
                 </a>
               )
             })}
@@ -179,6 +154,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </main>
       </div>
-    </NotificationContext.Provider>
+    </>
   )
 }

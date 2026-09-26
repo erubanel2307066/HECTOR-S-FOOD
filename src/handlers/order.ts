@@ -1,9 +1,9 @@
 import { sendText, sendButtons } from '../lib/whatsapp'
 import { formatOrderSummary, parseOrderText } from '../lib/menu'
-import { prisma } from '../lib/prisma'
-import type { MenuItem } from '../generated/prisma/client'
+import { getActiveMenu } from '../lib/menu-store'
+import { getConversation, setConversation, clearConversation } from '../lib/conversation-store'
 
-export async function handleStartOrder(phone: string, data: { items: MenuItem[] }) {
+export async function handleStartOrder(phone: string) {
   await sendText(phone,
     '🛒 *Hacer pedido*\n\n' +
     'Escribe los códigos de los productos y la cantidad.\n\n' +
@@ -13,24 +13,18 @@ export async function handleStartOrder(phone: string, data: { items: MenuItem[] 
     'O escribe *0* para cancelar.'
   )
 
-  await prisma.conversation.upsert({
-    where: { phone },
-    update: { step: 'awaiting_items', data: JSON.stringify({ items: data.items }) },
-    create: { phone, step: 'awaiting_items', data: JSON.stringify({ items: data.items }) },
-  })
+  setConversation(phone, 'awaiting_items')
 }
 
-export async function handleAwaitingItems(phone: string, text: string, data: { items: MenuItem[] }) {
+export async function handleAwaitingItems(phone: string, text: string) {
   if (text === '0') {
     await sendText(phone, 'Pedido cancelado.')
-    await prisma.conversation.update({
-      where: { phone },
-      data: { step: 'main_menu' },
-    })
+    clearConversation(phone)
     return
   }
 
-  const parsed = parseOrderText(text, data.items)
+  const menuItems = await getActiveMenu()
+  const parsed = parseOrderText(text, menuItems)
 
   if (!parsed) {
     await sendText(phone,
@@ -46,13 +40,7 @@ export async function handleAwaitingItems(phone: string, text: string, data: { i
 
   await sendText(phone, formatOrderSummary(parsed))
 
-  await prisma.conversation.update({
-    where: { phone },
-    data: {
-      step: 'awaiting_type',
-      data: JSON.stringify({ items: data.items, selected: parsed, total }),
-    },
-  })
+  setConversation(phone, 'awaiting_type', { selected: parsed, total })
 
   await sendButtons(phone,
     '🚚 Tipo de entrega',
@@ -65,9 +53,12 @@ export async function handleAwaitingItems(phone: string, text: string, data: { i
   )
 }
 
-export async function handleAwaitingAddress(phone: string, orderType: string, data: any) {
+export async function handleAwaitingAddress(phone: string, orderType: string) {
+  const conv = getConversation(phone)
+  if (!conv) return
+
   if (orderType === 'pickup') {
-    return handleAwaitingSchedule(phone, 'pickup', '', data)
+    return handleAwaitingSchedule(phone, 'pickup', '')
   }
 
   await sendText(phone,
@@ -78,65 +69,48 @@ export async function handleAwaitingAddress(phone: string, orderType: string, da
     '- Referencia (opcional)'
   )
 
-  await prisma.conversation.update({
-    where: { phone },
-    data: {
-      step: 'awaiting_address',
-      data: JSON.stringify({ ...data, type: 'delivery' }),
-    },
-  })
+  setConversation(phone, 'awaiting_address', { ...conv.data, type: 'delivery' })
 }
 
-export async function handleAddressReceived(phone: string, address: string, data: any) {
+export async function handleAddressReceived(phone: string, address: string) {
+  const conv = getConversation(phone)
+  if (!conv) return
+
   await sendText(phone,
     `✅ Dirección guardada:\n_${address}_\n\n` +
     '🕐 *¿A qué hora quieres que llegue tu pedido?*\n\n' +
     'Escribe la hora (ej: *1:00 PM* o *13:00*)'
   )
 
-  await prisma.conversation.update({
-    where: { phone },
-    data: {
-      step: 'awaiting_schedule',
-      data: JSON.stringify({ ...data, address }),
-    },
-  })
+  setConversation(phone, 'awaiting_schedule', { ...conv.data, address })
 }
 
-export async function handleAwaitingSchedule(phone: string, type: string, address: string, data: any) {
+export async function handleAwaitingSchedule(phone: string, type: string, address: string) {
+  const conv = getConversation(phone)
+  if (!conv) return
+
   await sendText(phone,
     '🕐 *¿A qué hora quieres que llegue tu pedido?*\n\n' +
     'Escribe la hora (ej: *1:00 PM* o *13:00*)'
   )
 
-  await prisma.conversation.update({
-    where: { phone },
-    data: {
-      step: 'awaiting_schedule',
-      data: JSON.stringify({ ...data, type, address }),
-    },
-  })
+  setConversation(phone, 'awaiting_schedule', { ...conv.data, type, address })
 }
 
-export async function handleScheduleReceived(phone: string, schedule: string, data: any) {
-  const order = await prisma.order.create({
-    data: {
-      phone,
-      items: JSON.stringify(data.selected),
-      type: data.type || 'delivery',
-      address: data.address || null,
-      schedule,
-      total: data.total,
-      status: 'pending',
-    },
-  })
+export async function handleScheduleReceived(phone: string, schedule: string) {
+  const conv = getConversation(phone)
+  if (!conv) return
 
+  const data = conv.data as { selected: { name: string; qty: number; price: number }[]; total: number; type?: string; address?: string }
   const typeLabel = data.type === 'delivery' ? '🚚 A domicilio' : '🚶 Para llevar'
   const addressText = data.address ? `\n📍 ${data.address}` : ''
 
+  const itemsText = data.selected.map((i) => `${i.qty}x ${i.name} - $${(i.qty * i.price).toFixed(2)}`).join('\n')
+
   await sendText(phone,
     `✅ *¡PEDIDO CONFIRMADO!*\n\n` +
-    `📋 *Pedido #${order.id.slice(-4).toUpperCase()}*\n` +
+    `${itemsText}\n\n` +
+    `────────────────\n` +
     `${typeLabel}${addressText}\n` +
     `🕐 ${schedule}\n` +
     `💰 Total: $${data.total.toFixed(2)} MXN\n\n` +
@@ -144,24 +118,10 @@ export async function handleScheduleReceived(phone: string, schedule: string, da
     `Te notificaremos cuando tu pedido esté listo 📲`
   )
 
-  await prisma.client.update({
-    where: { phone },
-    data: {
-      orders: { increment: 1 },
-      lastOrder: new Date(),
-    },
-  })
-
-  await prisma.conversation.update({
-    where: { phone },
-    data: { step: 'main_menu' },
-  })
+  clearConversation(phone)
 }
 
 export async function handleCancelOrder(phone: string) {
   await sendText(phone, '❌ Pedido cancelado. ¡Esperamos tu próximo pedido!')
-  await prisma.conversation.update({
-    where: { phone },
-    data: { step: 'main_menu' },
-  })
+  clearConversation(phone)
 }

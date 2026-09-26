@@ -1,5 +1,4 @@
-import { prisma } from './prisma'
-import type { MenuItem } from '../generated/prisma/client'
+import { getActiveMenu, MenuItem } from './menu-store'
 
 export function formatMenuText(items: MenuItem[], title = 'MENÚ DEL DÍA'): string {
   if (items.length === 0) return '🍽 Hoy no hay menú disponible.'
@@ -65,21 +64,6 @@ export function parseOrderText(text: string, menuItems: MenuItem[]): { name: str
   return items.length > 0 ? items : null
 }
 
-export async function getTodaysMenu() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const dailyMenu = await prisma.dailyMenu.findUnique({
-    where: { date: today },
-  })
-
-  if (dailyMenu?.active) {
-    const ids = dailyMenu.items.split(',').map((id) => id.trim())
-    const items = await prisma.menuItem.findMany({
-      where: { id: { in: ids }, isActive: true },
-    })
-    if (items.length > 0) return items
-  }
-
-  return prisma.menuItem.findMany({ where: { isActive: true } })
+export async function getTodaysMenu(): Promise<MenuItem[]> {
+  return getActiveMenu()
 }

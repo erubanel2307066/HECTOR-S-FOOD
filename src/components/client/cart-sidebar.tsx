@@ -9,6 +9,41 @@ interface CartSidebarProps {
   onClose: () => void
 }
 
+function buildOrderMessage(
+  name: string,
+  phone: string,
+  items: { name: string; price: number; quantity: number }[],
+  total: number,
+  orderType: 'delivery' | 'pickup',
+  address: string,
+  schedule: string
+): string {
+  const lines: string[] = []
+  lines.push('🍽 *NUEVO PEDIDO - Hector\'s*')
+  lines.push('')
+  lines.push(`👤 *${name}*`)
+  lines.push(`📱 ${phone}`)
+  lines.push('')
+  lines.push('*Pedido:*')
+  for (const item of items) {
+    const subtotal = item.price * item.quantity
+    lines.push(`• ${item.quantity}x ${item.name} - $${subtotal.toFixed(2)}`)
+  }
+  lines.push('')
+  lines.push('────────────────')
+  lines.push(`💰 *Total: $${total.toFixed(2)} MXN*`)
+  lines.push(orderType === 'delivery' ? '🚚 A domicilio' : '🚶 Para llevar')
+  if (orderType === 'delivery' && address) {
+    lines.push(`📍 ${address}`)
+  }
+  if (schedule) {
+    lines.push(`🕐 ${schedule}`)
+  }
+  lines.push('')
+  lines.push(`💵 Pago: ${BUSINESS.payment}`)
+  return lines.join('\n')
+}
+
 export default function CartSidebar({ onClose }: CartSidebarProps) {
   const { items, updateQuantity, removeItem, clearCart } = useCart()
   const [customerName, setCustomerName] = useState('')
@@ -36,29 +71,31 @@ export default function CartSidebar({ onClose }: CartSidebarProps) {
     setError('')
 
     try {
-      const res = await fetch('/api/orders', {
+      const message = buildOrderMessage(
+        customerName.trim(),
+        phone.trim(),
+        items.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity })),
+        total,
+        orderType,
+        address.trim(),
+        schedule
+      )
+
+      const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''
+
+      await fetch('/api/admin/notify-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: customerName.trim(),
-          phone: phone.trim(),
-          type: orderType,
-          address: address.trim() || null,
-          schedule: schedule || null,
-          items: items.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price })),
-          total,
-        }),
-      })
+        body: JSON.stringify({ message }),
+      }).catch(() => {})
 
-      if (res.ok) {
-        setSuccess(true)
-        clearCart()
-      } else {
-        const data = await res.json()
-        setError(data.error || 'Error al enviar el pedido')
-      }
+      const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`
+      window.open(waUrl, '_blank')
+
+      setSuccess(true)
+      clearCart()
     } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+      setError('Error al procesar el pedido. Intenta de nuevo.')
     } finally {
       setSending(false)
     }
@@ -96,9 +133,9 @@ export default function CartSidebar({ onClose }: CartSidebarProps) {
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#ecfdf3]">
                 <Icon name="check" size={40} className="text-[#16a34a]" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-[#111827]">¡Pedido enviado!</h3>
+              <h3 className="mb-2 text-xl font-semibold text-[#111827]">¡Pedido listo!</h3>
               <p className="mb-2 text-sm text-[#6b7280]">
-                Recibirás la confirmación por WhatsApp en unos momentos.
+                Se abrió WhatsApp con tu pedido. Presiona <strong>Enviar</strong> para completarlo.
               </p>
               <div className="mb-6 rounded-[1.25rem] border border-[#f4d9b3] bg-[#fff7ed] p-3 text-sm text-[#374151]">
                 <p className="font-medium text-[#9a2c00]">👨‍🍳 {BUSINESS.prep}</p>
@@ -272,17 +309,19 @@ export default function CartSidebar({ onClose }: CartSidebarProps) {
             <button
               onClick={handleSubmit}
               disabled={sending}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#b45309] py-3 text-base font-bold text-white shadow-[0_12px_30px_rgba(180,83,9,0.22)] transition-colors hover:bg-[#93370d] disabled:bg-[#f4c381]"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] py-3 text-base font-bold text-white shadow-[0_12px_30px_rgba(37,211,102,0.25)] transition-colors hover:bg-[#1da851] disabled:bg-[#86e0a9]"
             >
               {sending ? (
                 <>
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Enviando...
+                  Preparando...
                 </>
               ) : (
                 <>
-                  <Icon name="send" size={20} />
-                  Enviar pedido
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  Comprar por WhatsApp
                 </>
               )}
             </button>

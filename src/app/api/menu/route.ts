@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getActiveMenu } from '@/lib/menu-store'
 
 export async function GET() {
   try {
-    const items = await prisma.menuItem.findMany({
-      where: { isActive: true },
-      orderBy: [{ category: 'asc' }, { name: 'asc' }],
-    })
+    const items = await getActiveMenu()
+    const sorted = [...items].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
 
     return NextResponse.json({
-      items: items.map(({ isActive, ...rest }) => ({ ...rest, available: isActive })),
+      items: sorted.map(({ isActive, ...rest }) => ({ ...rest, available: isActive })),
     })
   } catch (error) {
     console.error('[Menu Error]', error)

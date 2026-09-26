@@ -1,6 +1,6 @@
 import { sendButtons, sendText } from '../lib/whatsapp'
 import { formatMenuText, getTodaysMenu } from '../lib/menu'
-import { prisma } from '../lib/prisma'
+import { getActiveMenu } from '../lib/menu-store'
 
 export async function handleMenuToday(phone: string) {
   const items = await getTodaysMenu()
@@ -13,12 +13,6 @@ export async function handleMenuToday(phone: string) {
   const menuText = formatMenuText(items, 'MENÚ DEL DÍA')
   await sendText(phone, menuText)
 
-  await prisma.conversation.upsert({
-    where: { phone },
-    update: { step: 'ordering', data: JSON.stringify({ items }) },
-    create: { phone, step: 'ordering', data: JSON.stringify({ items }) },
-  })
-
   await sendButtons(phone,
     '🛒 ¿Cómo deseas ordenar?',
     'Escribe los códigos con cantidad o presiona el botón',
@@ -30,16 +24,10 @@ export async function handleMenuToday(phone: string) {
 }
 
 export async function handleMenuFull(phone: string) {
-  const items = await prisma.menuItem.findMany({ where: { isActive: true } })
+  const items = await getActiveMenu()
   const menuText = formatMenuText(items, 'MENÚ COMPLETO')
 
   await sendText(phone, menuText)
-
-  await prisma.conversation.upsert({
-    where: { phone },
-    update: { step: 'ordering', data: JSON.stringify({ items }) },
-    create: { phone, step: 'ordering', data: JSON.stringify({ items }) },
-  })
 
   await sendButtons(phone,
     '🛒 ¿Cómo deseas ordenar?',

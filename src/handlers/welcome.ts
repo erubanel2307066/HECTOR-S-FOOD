@@ -1,21 +1,9 @@
 import { sendButtons, sendText } from '../lib/whatsapp'
-import { prisma } from '../lib/prisma'
 import { BUSINESS } from '../lib/constants'
 import { sanitizePhone } from '../lib/validation'
 
 export async function handleWelcome(rawPhone: string, name?: string) {
   const phone = sanitizePhone(rawPhone)
-  await prisma.client.upsert({
-    where: { phone },
-    update: {},
-    create: { phone, name },
-  })
-
-  await prisma.conversation.upsert({
-    where: { phone },
-    update: { step: 'main_menu' },
-    create: { phone, step: 'main_menu' },
-  })
 
   const greeting = name
     ? `¡Hola ${name}! Bienvenido a *Hector's* 🎉`

@@ -1,0 +1,132 @@
+[
+  {
+    "id": "seed-p1",
+    "code": "P1",
+    "name": "Pollo 1/4",
+    "description": "Pierna o muslo con arroz, ensalada y tortillas",
+    "price": 65,
+    "category": "pollos",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-p2",
+    "code": "P2",
+    "name": "Pollo 1/2",
+    "description": "Pechuga con arroz, ensalada y tortillas",
+    "price": 90,
+    "category": "pollos",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-p3",
+    "code": "P3",
+    "name": "Pollo Entero",
+    "description": "Pollo completo con arroz, ensalada y tortillas",
+    "price": 150,
+    "category": "pollos",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-h1",
+    "code": "H1",
+    "name": "Hamburguesa Sencilla",
+    "description": "Carne 200g, lechuga, tomate y cebolla",
+    "price": 55,
+    "category": "hamburguesas",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-h2",
+    "code": "H2",
+    "name": "Hamburguesa con Queso",
+    "description": "Carne 200g, queso amarillo, lechuga y tomate",
+    "price": 65,
+    "category": "hamburguesas",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-h3",
+    "code": "H3",
+    "name": "Hamburguesa Especial",
+    "description": "Doble carne, doble queso, tocino y papas",
+    "price": 85,
+    "category": "hamburguesas",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-t1",
+    "code": "T1",
+    "name": "Tacos de Pollo (3)",
+    "description": "Tres tacos de pollo con cebolla y cilantro",
+    "price": 40,
+    "category": "tacos",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-t2",
+    "code": "T2",
+    "name": "Tacos de Carne (3)",
+    "description": "Tres tacos de carne asada con cebolla y cilantro",
+    "price": 50,
+    "category": "tacos",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-g1",
+    "code": "G1",
+    "name": "Guacamole con Totopos",
+    "description": "Guacamole fresco con totopos crujientes",
+    "price": 45,
+    "category": "guarniciones",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-g2",
+    "code": "G2",
+    "name": "Papas a la Francesa",
+    "description": "Papas crujientes con sal",
+    "price": 35,
+    "category": "guarniciones",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-b1",
+    "code": "B1",
+    "name": "Agua Fresca 1L",
+    "description": "Horchata, Jamaica o limón",
+    "price": 25,
+    "category": "bebidas",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-b2",
+    "code": "B2",
+    "name": "Refresco 600ml",
+    "description": "Coca-Cola, Sprite o Sidral",
+    "price": 20,
+    "category": "bebidas",
+    "image": null,
+    "isActive": true
+  },
+  {
+    "id": "seed-b3",
+    "code": "B3",
+    "name": "Agua Natural 1L",
+    "description": "Agua purificada",
+    "price": 15,
+    "category": "bebidas",
+    "image": null,
+    "isActive": true
+  }
+]

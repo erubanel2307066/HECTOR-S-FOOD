@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { sendText, markAsRead } from '@/lib/whatsapp'
-import { prisma } from '@/lib/prisma'
+import { markAsRead } from '@/lib/whatsapp'
 import { sanitizePhone } from '@/lib/validation'
+import { getConversation } from '@/lib/conversation-store'
 import { handleWelcome, handleMainMenu, handleInfo } from '@/handlers/welcome'
 import { handleMenuToday, handleMenuFull } from '@/handlers/menu'
 import {
@@ -76,20 +76,6 @@ export async function POST(req: Request) {
             }
           }
         }
-
-        for (const contact of change.value.contacts || []) {
-          const phone = sanitizePhone(contact.wa_id)
-          const name = contact.profile?.name
-
-          const existing = await prisma.conversation.findUnique({ where: { phone } })
-          if (!existing) {
-            await prisma.client.upsert({
-              where: { phone },
-              update: { name },
-              create: { phone, name },
-            })
-          }
-        }
       }
     }
 
@@ -123,7 +109,8 @@ async function handleIncomingText(phone: string, text: string) {
     return handleMenuToday(phone)
   }
 
-  const conv = await prisma.conversation.findUnique({ where: { phone } })
+  const conv = getConversation(phone)
+
   if (!conv) {
     return handleWelcome(phone)
   }
@@ -132,38 +119,23 @@ async function handleIncomingText(phone: string, text: string) {
     return handleMainMenu(phone)
   }
 
-  if (conv.step === 'awaiting_items' && conv.data) {
-    try {
-      const data = JSON.parse(conv.data)
-      return handleAwaitingItems(phone, text, data)
-    } catch {
-      return handleMainMenu(phone)
-    }
+  if (conv.step === 'awaiting_items') {
+    return handleAwaitingItems(phone, text)
   }
 
-  if (conv.step === 'awaiting_address' && conv.data) {
-    try {
-      const data = JSON.parse(conv.data)
-      return handleAddressReceived(phone, text, data)
-    } catch {
-      return handleMainMenu(phone)
-    }
+  if (conv.step === 'awaiting_address') {
+    return handleAddressReceived(phone, text)
   }
 
-  if (conv.step === 'awaiting_schedule' && conv.data) {
-    try {
-      const data = JSON.parse(conv.data)
-      return handleScheduleReceived(phone, text, data)
-    } catch {
-      return handleMainMenu(phone)
-    }
+  if (conv.step === 'awaiting_schedule') {
+    return handleScheduleReceived(phone, text)
   }
 
   return handleMainMenu(phone)
 }
 
 async function handleButtonClick(phone: string, buttonId: string) {
-  const conv = await prisma.conversation.findUnique({ where: { phone } })
+  const conv = getConversation(phone)
 
   switch (buttonId) {
     case 'main_menu':
@@ -178,39 +150,16 @@ async function handleButtonClick(phone: string, buttonId: string) {
     case 'info':
       return handleInfo(phone)
 
-    case 'start_order': {
-      let items: { id: string; name: string; price: number; quantity: number }[] = []
-      try {
-        items = conv?.data ? JSON.parse(conv.data).items : []
-      } catch {
-        // ignore
-      }
-      return handleStartOrder(phone, { items: items as never })
-    }
+    case 'start_order':
+      return handleStartOrder(phone)
 
-    case 'type_delivery': {
-      if (conv?.data) {
-        try {
-          const data = JSON.parse(conv.data)
-          return handleAwaitingAddress(phone, 'delivery', data)
-        } catch {
-          // ignore
-        }
-      }
+    case 'type_delivery':
+      if (conv) return handleAwaitingAddress(phone, 'delivery')
       return handleMainMenu(phone)
-    }
 
-    case 'type_pickup': {
-      if (conv?.data) {
-        try {
-          const data = JSON.parse(conv.data)
-          return handleAwaitingSchedule(phone, 'pickup', '', data)
-        } catch {
-          // ignore
-        }
-      }
+    case 'type_pickup':
+      if (conv) return handleAwaitingSchedule(phone, 'pickup', '')
       return handleMainMenu(phone)
-    }
 
     case 'cancel_order':
       return handleCancelOrder(phone)

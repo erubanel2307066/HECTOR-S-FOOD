@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdmin } from '@/lib/auth'
-import { BUCKET_NAME, getPublicUrl, uploadImage } from '@/lib/supabase'
+import { isCloudinaryConfigured, uploadImage } from '@/lib/cloudinary'
 
 const MAX_SIZE = 5 * 1024 * 1024
 
@@ -9,6 +9,13 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!isCloudinaryConfigured()) {
+    return NextResponse.json(
+      { error: 'Cloudinary no está configurado. Agrega CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET en .env' },
+      { status: 400 }
+    )
   }
 
   try {
@@ -33,18 +40,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const ext = file.name.split('.').pop() || 'jpg'
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-    const bytes = await file.arrayBuffer()
+    const bytes = Buffer.from(await file.arrayBuffer())
+    const url = await uploadImage(bytes, 'hectors-food/menu')
 
-    const uploadError = await uploadImage(filename, bytes, file.type)
-
-    if (uploadError) {
-      console.error('[Supabase Upload Error]', uploadError)
+    if (!url) {
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
     }
 
-    const url = getPublicUrl(filename)
     return NextResponse.json({ url })
   } catch (error) {
     console.error('[Upload Error]', error)

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getMenu, updateMenuItem, deleteMenuItem } from '@/lib/menu-store'
 import { isAdmin } from '@/lib/auth'
-import { deleteImage } from '@/lib/supabase'
-
-const ALLOWED_FIELDS = ['name', 'description', 'price', 'category', 'image', 'available']
+import { deleteImage } from '@/lib/cloudinary'
 
 function mapBody(body: Record<string, unknown>) {
   const data: Record<string, unknown> = {}
@@ -16,77 +14,50 @@ function mapBody(body: Record<string, unknown>) {
   return data
 }
 
-function extractFilename(url: string): string | null {
-  try {
-    const u = new URL(url)
-    const parts = u.pathname.split('/')
-    return parts[parts.length - 1] || null
-  } catch {
-    return null
-  }
+async function deleteImageIfCloudinary(url: string | null) {
+  if (!url || !url.includes('cloudinary')) return
+  await deleteImage(url)
 }
 
-async function deleteImageIfSupabase(url: string | null) {
-  if (!url) return
-  const filename = extractFilename(url)
-  if (!filename) return
-  await deleteImage(filename)
+async function handleUpdate(req: NextRequest, id: string) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const items = await getMenu()
+    const current = items.find((i) => i.id === id)
+    if (!current) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    }
+
+    const body = await req.json()
+    const mapped = mapBody(body)
+
+    if (mapped.image !== undefined && mapped.image !== current.image) {
+      await deleteImageIfCloudinary(current.image)
+    }
+
+    const updated = await updateMenuItem(id, mapped)
+    if (!updated) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    }
+
+    const { isActive, ...rest } = updated
+    return NextResponse.json({ item: { ...rest, available: isActive } })
+  } catch {
+    return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+  }
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { id } = await params
-  const body = await req.json()
-
-  try {
-    const current = await prisma.menuItem.findUnique({ where: { id } })
-    if (!current) {
-      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
-    }
-
-    const mapped = mapBody(body)
-
-    if (mapped.image !== undefined && mapped.image !== current.image) {
-      await deleteImageIfSupabase(current.image)
-    }
-
-    const item = await prisma.menuItem.update({ where: { id }, data: mapped })
-    const { isActive, ...rest } = item
-    return NextResponse.json({ item: { ...rest, available: isActive } })
-  } catch {
-    return NextResponse.json({ error: 'Item not found' }, { status: 404 })
-  }
+  return handleUpdate(req, id)
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { id } = await params
-  const body = await req.json()
-
-  try {
-    const current = await prisma.menuItem.findUnique({ where: { id } })
-    if (!current) {
-      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
-    }
-
-    const mapped = mapBody(body)
-
-    if (mapped.image !== undefined && mapped.image !== current.image) {
-      await deleteImageIfSupabase(current.image)
-    }
-
-    const item = await prisma.menuItem.update({ where: { id }, data: mapped })
-    const { isActive, ...rest } = item
-    return NextResponse.json({ item: { ...rest, available: isActive } })
-  } catch {
-    return NextResponse.json({ error: 'Item not found' }, { status: 404 })
-  }
+  return handleUpdate(req, id)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -96,13 +67,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params
   try {
-    const item = await prisma.menuItem.findUnique({ where: { id } })
+    const items = await getMenu()
+    const item = items.find((i) => i.id === id)
     if (!item) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
-    await deleteImageIfSupabase(item.image)
-    await prisma.menuItem.delete({ where: { id } })
+    await deleteImageIfCloudinary(item.image)
+    await deleteMenuItem(id)
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'Item not found' }, { status: 404 })

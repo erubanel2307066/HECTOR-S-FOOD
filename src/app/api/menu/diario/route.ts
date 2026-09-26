@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { getTodaysMenu } from '@/lib/menu'
+import { getActiveMenu } from '@/lib/menu-store'
 
 export async function GET() {
   try {
-    const items = await getTodaysMenu()
+    const items = await getActiveMenu()
     return NextResponse.json({
       items: items.map(({ isActive, ...rest }) => ({ ...rest, available: isActive })),
     })

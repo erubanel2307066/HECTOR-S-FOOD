@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { randomBytes } from 'crypto'
+import { isCloudinaryConfigured, fetchMenuJson, uploadMenuJson } from './cloudinary'
 
 export interface MenuItem {
   id: string
@@ -14,19 +15,72 @@ export interface MenuItem {
 }
 
 const MENU_PATH = path.join(process.cwd(), 'data', 'menu.json')
+const CACHE_TTL = 60 * 1000
 
-export async function getMenu(): Promise<MenuItem[]> {
+let cache: { items: MenuItem[]; at: number } | null = null
+
+async function readLocal(): Promise<MenuItem[]> {
   try {
     const raw = await fs.readFile(MENU_PATH, 'utf-8')
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
 }
 
+async function writeLocal(items: MenuItem[]): Promise<void> {
+  try {
+    await fs.mkdir(path.dirname(MENU_PATH), { recursive: true })
+    await fs.writeFile(MENU_PATH, JSON.stringify(items, null, 2), 'utf-8')
+  } catch (error) {
+    console.error('[Menu Store] Local write error:', error)
+  }
+}
+
+function isValid(data: unknown): data is MenuItem[] {
+  return Array.isArray(data) && data.every((i) => i && typeof i.id === 'string' && typeof i.name === 'string')
+}
+
+export async function getMenu(): Promise<MenuItem[]> {
+  if (cache && Date.now() - cache.at < CACHE_TTL) {
+    return cache.items
+  }
+
+  if (isCloudinaryConfigured()) {
+    const remoteText = await fetchMenuJson()
+    if (remoteText) {
+      try {
+        const remote = JSON.parse(remoteText)
+        if (isValid(remote)) {
+          await writeLocal(remote)
+          cache = { items: remote, at: Date.now() }
+          return remote
+        }
+      } catch {
+      }
+    } else {
+      const local = await readLocal()
+      if (local.length > 0) {
+        await uploadMenuJson(JSON.stringify(local, null, 2))
+        cache = { items: local, at: Date.now() }
+        return local
+      }
+    }
+  }
+
+  const local = await readLocal()
+  cache = { items: local, at: Date.now() }
+  return local
+}
+
 export async function saveMenu(items: MenuItem[]): Promise<void> {
-  await fs.mkdir(path.dirname(MENU_PATH), { recursive: true })
-  await fs.writeFile(MENU_PATH, JSON.stringify(items, null, 2), 'utf-8')
+  cache = { items, at: Date.now() }
+  await writeLocal(items)
+  if (isCloudinaryConfigured()) {
+    const ok = await uploadMenuJson(JSON.stringify(items, null, 2))
+    if (!ok) console.error('[Menu Store] No se pudo persistir menú en Cloudinary')
+  }
 }
 
 export async function getActiveMenu(): Promise<MenuItem[]> {

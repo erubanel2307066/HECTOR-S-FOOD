@@ -106,7 +106,7 @@
     "description": "Pierna o muslo con arroz, ensalada y tortillas",
     "price": 65,
     "category": "pollos",
-    "image": null,
+    "image": "https://res.cloudinary.com/boqkj76i/image/upload/v1790520447/hectors-food/menu/dyqd2qappne4o3ckotsi.png",
     "isActive": true
   },
   {
